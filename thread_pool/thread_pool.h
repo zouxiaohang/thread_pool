@@ -19,16 +19,17 @@ namespace tp{
 	class thread_pool{
 	private:
 		typedef std::function<void()> task_type;
-		//typedef std::packaged_task<FunctionType> task;
 	private:
 		std::atomic<bool> stop_;
 		std::mutex mtx_;
 		std::condition_variable cond_;
+
 		std::queue<task_type> tasks_;
 		std::vector<std::thread> threads_;
 		tp::thread_guard<std::thread> tg_;
 	public:
 		thread_pool();
+		void stop(){ stop_ = true; }
 	};
 
 	thread_pool::thread_pool() :stop_(false), tg_(threads_){
@@ -48,9 +49,7 @@ namespace tp{
 				}
 				task();
 			}
-
-		}
-		));
+		}));
 	}
 }
 
