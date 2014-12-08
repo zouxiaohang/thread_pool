@@ -56,11 +56,24 @@ namespace tp{
 			}
 		}));
 	}
-	/*template<class Function, class... Args>
+	template<class Function, class... Args>
 	std::future<typename std::result_of<Function(Args...)>::type> 
 		thread_pool::submit(Function&& fcn, Args&&... args){
+		typedef typename std::result_of<Function(Args...)>::type return_type;
+		typedef std::packaged_task<return_type()> task;
 
-	}*/
+		auto t = std::make_shared<task>(
+			std::bind(std::forward<Function>(fcn), std::forward<Args>(args)...));
+		auto ret = t->get_future();
+		{
+			std::lock_guard<std::mutex> lg(mtx_);
+			if (stop_) throw std::runtime_error("thread pool has stopped");
+			//tasks_.push(std::move(*t));
+			tasks_.emplace([t]{(*t)(); });
+		}
+		cond_.notify_one();
+		return ret;
+	}
 }
 
 #endif
