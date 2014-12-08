@@ -3,15 +3,14 @@
 
 #include <atomic>
 #include <condition_variable>
-#include <mutex>
-#include <thread>
-#include <future>
 #include <functional>
+#include <future>
+#include <mutex>
 #include <queue>
-#include <vector>
-#include <utility>
-#include <iostream>
+#include <thread>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 #include "thread_guard.h"
 
@@ -68,7 +67,6 @@ namespace tp{
 		{
 			std::lock_guard<std::mutex> lg(mtx_);
 			if (stop_) throw std::runtime_error("thread pool has stopped");
-			//tasks_.push(std::move(*t));
 			tasks_.emplace([t]{(*t)(); });
 		}
 		cond_.notify_one();
