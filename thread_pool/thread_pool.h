@@ -29,6 +29,10 @@ namespace tp{
 		tp::thread_guard<std::thread> tg_;
 	public:
 		thread_pool();
+		~thread_pool(){ stop(); cond_.notify_all(); }
+
+		template<class Function, class... Args>
+		std::future<typename std::result_of<Function(Args...)>::type> submit(Function&&, Args&&...);
 		void stop(){ stop_ = true; }
 	};
 
@@ -43,7 +47,8 @@ namespace tp{
 				task_type task;
 				{
 					std::unique_lock<std::mutex> ulk(this->mtx_);
-					this->cond_.wait(ulk, [this]{return !this->tasks_.empty(); });
+					this->cond_.wait(ulk, [this]{return stop_ || !this->tasks_.empty(); });
+					if (stop_) return;
 					task = std::move(this->tasks_.front());
 					this->tasks_.pop();
 				}
@@ -51,6 +56,11 @@ namespace tp{
 			}
 		}));
 	}
+	/*template<class Function, class... Args>
+	std::future<typename std::result_of<Function(Args...)>::type> 
+		thread_pool::submit(Function&& fcn, Args&&... args){
+
+	}*/
 }
 
 #endif
