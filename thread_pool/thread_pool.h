@@ -27,7 +27,7 @@ namespace tp{
 		std::vector<std::thread> threads_;
 		tp::thread_guard<std::thread> tg_;
 	public:
-		thread_pool();
+		explicit thread_pool(int n = 0);
 		~thread_pool(){ stop(); cond_.notify_all(); }
 
 		template<class Function, class... Args>
@@ -35,11 +35,17 @@ namespace tp{
 		void stop(){ stop_ = true; }
 	};
 
-	thread_pool::thread_pool() :stop_(false), tg_(threads_){
-		size_t nthreads = std::thread::hardware_concurrency();
-		nthreads = nthreads == 0 ? 2 : nthreads;
+	thread_pool::thread_pool(int n) :stop_(false), tg_(threads_){
+		auto nthreads = n;
+		if (nthreads == 0){
+			nthreads = std::thread::hardware_concurrency();
+			nthreads = nthreads == 0 ? 2 : nthreads;
+		}else{
+			if (nthreads < 0)
+				throw std::runtime_error("the number of threads must be greater than 0");
+		}
 
-		for (size_t i = 0; i != nthreads; ++i)
+		for (int i = 0; i != nthreads; ++i)
 			threads_.push_back(std::thread(
 			[this]{
 			while (!stop_){
@@ -67,6 +73,7 @@ namespace tp{
 		{
 			std::lock_guard<std::mutex> lg(mtx_);
 			if (stop_) throw std::runtime_error("thread pool has stopped");
+
 			tasks_.emplace([t]{(*t)(); });
 		}
 		cond_.notify_one();
