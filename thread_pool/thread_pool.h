@@ -32,7 +32,7 @@ namespace tp{
 
 		template<class Function, class... Args>
 		std::future<typename std::result_of<Function(Args...)>::type> submit(Function&&, Args&&...);
-		void stop(){ stop_ = true; }
+		void stop(){ /*stop_ = true;*/stop_.store(true, std::memory_order_release); }
 	};
 
 	thread_pool::thread_pool(int n) :stop_(false), tg_(threads_){
@@ -48,12 +48,15 @@ namespace tp{
 		for (int i = 0; i != nthreads; ++i)
 			threads_.push_back(std::thread(
 			[this]{
-			while (!stop_){
+			//while (!stop_){
+			while (!stop_.load(std::memory_order_acquire)){
 				task_type task;
 				{
 					std::unique_lock<std::mutex> ulk(this->mtx_);
-					this->cond_.wait(ulk, [this]{return stop_ || !this->tasks_.empty(); });
-					if (stop_) return;
+					//this->cond_.wait(ulk, [this]{return stop_ || !this->tasks_.empty(); });
+					this->cond_.wait(ulk, [this]{return stop_.load(std::memory_order_acquire) || !this->tasks_.empty(); });
+					//if (stop_) return;
+					if (stop_.load(std::memory_order_acquire)) return;
 					task = std::move(this->tasks_.front());
 					this->tasks_.pop();
 				}
@@ -72,8 +75,8 @@ namespace tp{
 		auto ret = t->get_future();
 		{
 			std::lock_guard<std::mutex> lg(mtx_);
-			if (stop_) throw std::runtime_error("thread pool has stopped");
-
+			//if (stop_) throw std::runtime_error("thread pool has stopped");
+			if (stop_.load(std::memory_order_acquire)) throw std::runtime_error("thread pool has stopped");
 			tasks_.emplace([t]{(*t)(); });
 		}
 		cond_.notify_one();
