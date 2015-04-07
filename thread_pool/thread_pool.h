@@ -37,12 +37,9 @@ namespace tp{
 
 	thread_pool::thread_pool(int n) :stop_(false), tg_(threads_){
 		auto nthreads = n;
-		if (nthreads == 0){
+		if (nthreads <= 0){
 			nthreads = std::thread::hardware_concurrency();
 			nthreads = nthreads == 0 ? 2 : nthreads;
-		}else{
-			if (nthreads < 0)
-				throw std::runtime_error("the number of threads must be greater than 0");
 		}
 
 		for (int i = 0; i != nthreads; ++i)
